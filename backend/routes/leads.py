@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from hubspot_service import fetch_lead_by_id, fetch_lead_by_email, fetch_engagements
-from ai_service import extract_engagement_summary
+from ai_service import extract_engagement_summary, clean_client_data
 
 leads_blueprint = Blueprint('leads', __name__)
 
@@ -12,7 +12,10 @@ def get_lead(lead_id):
 @leads_blueprint.route('/email/<email>', methods=['GET'])
 def get_lead_by_email(email):
     lead = fetch_lead_by_email(email)
-    return jsonify(lead or {"error": "Lead not found"})
+    if not lead:
+        return jsonify({"error": "No lead data"}), 404
+    cleaned_client = clean_client_data(lead)
+    return cleaned_client
 
 @leads_blueprint.route('/engagement/<lead_id>', methods=['GET'])
 def get_engagement(lead_id):
