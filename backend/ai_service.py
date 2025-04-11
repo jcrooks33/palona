@@ -21,7 +21,12 @@ def extract_engagement_summary(data):
             import re
             body = re.sub("<[^<]+?>", "", body)  # strip HTML tags
 
-        interactions.append(f"[{type_}] {date}: {body.strip()}")
+         # Create a JSON object for each interaction
+        interactions.append({
+            "type": type_,
+            "date": date,
+            "body": body.strip()
+        })
 
     return interactions
 
