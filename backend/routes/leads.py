@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from hubspot_service import fetch_lead_by_id, fetch_lead_by_email, fetch_engagements, fetch_recent_leads
 from ai_service import extract_engagement_summary, clean_client_data
-from openai_service import generate_intro_email, generate_contact_summary
+from openai_service import generate_intro_email, generate_contact_summary, generate_next_steps
 
 leads_blueprint = Blueprint('leads', __name__)
 
@@ -198,3 +198,41 @@ def create_email_for_contact(lead_id):
         return jsonify({"error": "Failed to create email"}), 500
     
     return jsonify(result), 201  # 201 Created
+
+
+@leads_blueprint.route('/next_steps/<lead_id>', methods=['POST'])
+def get_next_steps(lead_id):
+    # Get the JSON data from the request
+    data = request.get_json()
+    
+    if not data or not isinstance(data, dict):
+        return jsonify({"error": "Invalid request format. Expected JSON data"}), 400
+    
+    # Extract the draft email and summary from the request
+    draft_email = data.get('draftEmail')
+    draft_summary = data.get('draftSummary')
+    user_info = data.get('userInfo', {})
+    
+    if not draft_email or not draft_summary:
+        return jsonify({
+            "error": "Missing required fields. Next steps generation requires both draft email and summary"
+        }), 400
+    
+    # Get lead data for additional context
+    lead = fetch_lead_by_id(lead_id)
+    if not lead:
+        return jsonify({"error": "No lead data"}), 404
+    
+    cleaned_client = clean_client_data(lead)
+    
+    # Get engagement data for more context
+    raw_engagements = fetch_engagements(lead_id)
+    interactions = []
+    if raw_engagements:
+        interactions = extract_engagement_summary(raw_engagements)
+    
+    # Generate next steps using OpenAI
+    from openai_service import generate_next_steps
+    next_steps = generate_next_steps(cleaned_client, interactions, draft_email, draft_summary, user_info)
+    
+    return jsonify({"nextSteps": next_steps})
