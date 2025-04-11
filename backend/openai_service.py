@@ -15,7 +15,7 @@ def generate_intro_email(contact, user_info):
 
     system_message = {
             "role": "system",
-            "content": "You are a helpful sales email assistant who drafts personalized outreach emails."
+            "content": "You are a helpful sales assistant who drafts summaries of previous client interactions."
         }
     user_message = {
         "role": "user",
@@ -36,3 +36,22 @@ def generate_intro_email(contact, user_info):
     email_text = response.choices[0].message.content
     return email_text
 
+
+def generate_contact_summary(contact):
+    system_message = {
+            "role": "system",
+            "content": "You are a helpful sales email assistant who drafts personalized outreach emails."
+        }
+    user_message = {
+        "role": "user",
+        "content": (
+            f"Lead Interactions History: {contact}\n"
+            "Summarize prior communications with the lead, "
+        )
+    }
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[system_message, user_message],
+    )
+    email_text = response.choices[0].message.content
+    return email_text
