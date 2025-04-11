@@ -52,16 +52,16 @@ def clean_client_data(data):
     lastname = properties.get("lastname", "[No Last Name]")
     jobtitle = properties.get("jobtitle", "[No Job Title]")
 
-    # Compile a summary of the contact information
-    summary_lines = [
-        f"Contact ID: {contact_id}",
-        f"Archived: {archived}",
-        f"Created Date: {created_date}",
-        f"Updated Date: {updated_date}",
-        f"Name: {firstname} {lastname}",
-        f"Email: {email}",
-        f"Company: {company}",
-        f"Job Title: {jobtitle}",
-    ]
+    # Create a structured JSON object
+    client_json = {
+        "contact_id": contact_id,
+        "archived": archived,
+        "created_date": created_date,
+        "updated_date": updated_date,
+        "name": f"{firstname} {lastname}",
+        "email": email,
+        "company": company,
+        "job_title": jobtitle
+    }
     
-    return "\n".join(summary_lines)
+    return client_json
