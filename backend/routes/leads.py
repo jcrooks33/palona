@@ -7,7 +7,10 @@ leads_blueprint = Blueprint('leads', __name__)
 @leads_blueprint.route('/<lead_id>', methods=['GET'])
 def get_lead(lead_id):
     lead = fetch_lead_by_id(lead_id)
-    return jsonify(lead or {"error": "Lead not found"})
+    if not lead:
+        return jsonify({"error": "No lead data"}), 404
+    cleaned_client = clean_client_data(lead)
+    return cleaned_client
 
 @leads_blueprint.route('/email/<email>', methods=['GET'])
 def get_lead_by_email(email):
