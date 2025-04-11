@@ -160,3 +160,4 @@ def create_email(properties, associations):
     else:
         print(f"Error creating email: {response.status_code} - {response.text}")
         return None
+

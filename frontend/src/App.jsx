@@ -14,7 +14,8 @@ function App() {
     engagements: {}, // Will store engagement data by lead ID
     draftEmails: {}, // Will store generated emails by lead ID
     draftSummaries: {}, // Will store summaries by lead ID
-    recentLeads: {} // Will store recent leads by query parameters
+    recentLeads: {},
+    nextSteps: {} // Add this new cache section
   });
   
   // Display state variables
@@ -23,6 +24,8 @@ function App() {
   const [engagementData, setEngagementData] = useState(null);
   const [draftEmail, setDraftEmail] = useState(null);
   const [draftSummary, setDraftSummary] = useState(null);
+  const [nextSteps, setNextSteps] = useState(null);
+
   
   // Loading states for UI feedback
   const [loading, setLoading] = useState({
@@ -32,7 +35,8 @@ function App() {
     draftEmail: false,
     draftSummary: false,
     recentLeads: false,
-    sendEmail: false 
+    sendEmail: false,
+    nextSteps: false 
   });
   
   // Enhanced fetch function that uses the cache
@@ -93,6 +97,62 @@ function App() {
       });
   }, [dataCache]);
   
+// Function to generate next steps recommendations
+// Function to generate next steps recommendations
+const generateNextSteps = useCallback((id, emailData, summaryData) => {
+  setError(null);
+  setLoading(prev => ({ ...prev, nextSteps: true }));
+
+  // Prepare the request data
+  const requestData = {
+    draftEmail: emailData?.draftEmail || "",
+    draftSummary: summaryData?.draftSummary || "",
+    userInfo: {
+      name: "Jeffrey Crooks",
+      company: "Palona",
+      title: "GTM Engineer",
+      email: "jeffrey@palona.com"
+    }
+  };
+
+  // Make the API call
+  return fetch(`/api/leads/next_steps/${id}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestData)
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      return res.json();
+    })
+    .then((data) => {
+      // Update the cache
+      setDataCache(prevCache => ({
+        ...prevCache,
+        nextSteps: {
+          ...prevCache.nextSteps,
+          [id]: data
+        }
+      }));
+      
+      // Update the state
+      setNextSteps(data);
+      
+      // Reset loading state
+      setLoading(prev => ({ ...prev, nextSteps: false }));
+      
+      return data;
+    })
+    .catch((err) => {
+      setError(`Failed to generate next steps: ${err.message}`);
+      setLoading(prev => ({ ...prev, nextSteps: false }));
+      throw err;
+    });
+}, []); // Remove dependencies on draftEmail and draftSummary
+
+
   const getRecentLeads = useCallback((limit = 20, days = 7) => {
     return fetchData(
       `/api/leads/recent?limit=${limit}&days=${days}`,
@@ -148,25 +208,31 @@ function App() {
       });
   }, [fetchData, getEngagements, dataCache.engagements]);
   
-  // Function to trigger the complete AI agent workflow
-  const triggerAIAgent = useCallback((id) => {
-    setError(null);
-    
-    // First get the lead data
-    getLeadData(id)
-      .then(() => {
-        // Then get the engagement data
-        return getEngagements(id);
-      })
-      .then(() => {
-        // Generate both email and summary in parallel
-        return Promise.all([
-          generateDraftEmail(id),
-          generateSummary(id)
-        ]);
-      })
-      .catch(err => setError(err.message));
-  }, [getLeadData, getEngagements, generateDraftEmail, generateSummary]);
+// Function to trigger the complete AI agent workflow
+// Function to trigger the complete AI agent workflow
+const triggerAIAgent = useCallback((id) => {
+  setError(null);
+  
+  // First get the lead data
+  getLeadData(id)
+    .then(() => {
+      // Then get the engagement data
+      return getEngagements(id);
+    })
+    .then(() => {
+      // Generate both email and summary in parallel
+      return Promise.all([
+        generateDraftEmail(id),
+        generateSummary(id)
+      ]);
+    })
+    .then(([emailResult, summaryResult]) => {
+      // After both email and summary are generated, get next steps recommendations
+      // Pass the results directly instead of relying on state
+      return generateNextSteps(id, emailResult, summaryResult);
+    })
+    .catch(err => setError(err.message));
+}, [getLeadData, getEngagements, generateDraftEmail, generateSummary, generateNextSteps]);
 
 // Function to send the email to HubSpot
 const sendEmail = useCallback((id, emailText) => {
@@ -210,6 +276,17 @@ const sendEmail = useCallback((id, emailText) => {
       setLoading(prev => ({ ...prev, sendEmail: false }));
     });
 }, [dataCache.leads]);
+
+// Display next steps in a structured format
+const renderNextSteps = (data) => {
+  if (!data) return <p className="text-gray-500">No next steps recommendations yet.</p>;
+  
+  return (
+    <div className="whitespace-pre-wrap text-sm text-gray-800">
+      {data.nextSteps}
+    </div>
+  );
+};
 
 // Display leads in a table format
 const renderLeads = (leads) => {
@@ -409,6 +486,13 @@ const renderLeads = (leads) => {
             ) : (
               <p className="text-gray-500">No interaction summary generated yet.</p>
             )}
+          </div>
+          <div className="bg-white rounded shadow p-4 md:col-span-2">
+            <h2 className="text-xl font-semibold mb-3 text-gray-700">
+              Recommended Next Steps
+              {loading.nextSteps && <span className="ml-2 text-sm text-blue-500">Loading...</span>}
+            </h2>
+            {renderNextSteps(nextSteps)}
           </div>
         </div>
       </div>
