@@ -246,7 +246,7 @@ function App() {
             <button
               onClick={() => getLeadByEmail(email)}
               disabled={loading.emailLead}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-green-300"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300"
             >
               {loading.emailLead ? 'Loading...' : 'Fetch Lead by Email'}
             </button>
@@ -255,21 +255,21 @@ function App() {
             <button
               onClick={() => getEngagements(leadId)}
               disabled={loading.engagements}
-              className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 w-full sm:w-auto disabled:bg-purple-300"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300 w-full flex-1"
             >
               {loading.engagements ? 'Loading...' : 'Fetch Engagements'}
             </button>
             <button
               onClick={() => generateDraftEmail(leadId)}
               disabled={loading.draftEmail}
-              className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 w-full sm:w-auto disabled:bg-yellow-300"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300 w-full flex-1"
             >
               {loading.draftEmail ? 'Generating...' : 'Generate Draft Email'}
             </button>
             <button
               onClick={() => generateSummary(leadId)}
               disabled={loading.draftSummary}
-              className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full sm:w-auto disabled:bg-indigo-300"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300 w-full flex-1"
             >
               {loading.draftSummary ? 'Generating...' : 'Generate Interaction Summary'}
             </button>
