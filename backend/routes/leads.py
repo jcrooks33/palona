@@ -83,3 +83,118 @@ def get_recent_leads():
         })
     
     return jsonify({"leads": simplified_leads})
+
+def create_email(properties, associations):
+    """
+    Creates a new email engagement in HubSpot.
+    
+    Args:
+        properties: Dictionary of email properties (subject, body, etc.)
+        associations: Optional list of associations to link the email to contacts, companies, etc.
+    
+    Returns:
+        Created email data or None if the request fails
+    """
+    url = f"{BASE_URL}/crm/v3/objects/emails"
+    headers = {
+        'Authorization': f"Bearer {HUBSPOT_API_KEY}",
+        'Content-Type': 'application/json'
+    }
+    
+    # Ensure hs_timestamp exists as it's required
+    if 'hs_timestamp' not in properties:
+        from datetime import datetime
+        # Current time in milliseconds or UTC format
+        properties['hs_timestamp'] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    
+    payload = {
+        "properties": properties
+    }
+    
+    # Use the correct association format from the documentation
+    if associations:
+        payload["associations"] = associations
+    
+    response = requests.post(url, headers=headers, json=payload)
+    
+    # Log the full request and response for debugging
+    print(f"Request payload: {payload}")
+    print(f"Response: {response.status_code} - {response.text}")
+    
+    if response.status_code == 201:  # 201 Created
+        return response.json()
+    else:
+        print(f"Error creating email: {response.status_code} - {response.text}")
+        return None
+
+@leads_blueprint.route('/create_email/<lead_id>', methods=['POST'])
+def create_email_for_contact(lead_id):
+    # Get the JSON data from the request
+    data = request.get_json()
+    
+    if not data or not isinstance(data, dict):
+        return jsonify({"error": "Invalid request format. Expected JSON data"}), 400
+    
+    # Extract email properties from request
+    properties = data.get('properties', {})
+    
+    # Ensure required properties are present
+    if 'hs_email_subject' not in properties or ('hs_email_text' not in properties and 'hs_email_html' not in properties):
+        return jsonify({
+            "error": "Missing required fields. Email must have at least a subject and either text or HTML body"
+        }), 400
+    
+    # Set default values if not provided - hs_timestamp is REQUIRED according to docs
+    if 'hs_timestamp' not in properties:
+        from datetime import datetime
+        # UTC format as shown in the documentation examples
+        properties['hs_timestamp'] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    
+    if 'hs_email_direction' not in properties:
+        # Default to outgoing email
+        properties['hs_email_direction'] = 'EMAIL'
+    
+    # Set up associations using the correct format from the documentation
+    associations = []
+    
+    # Add contact association
+    contact_association = {
+        "to": {
+            "id": lead_id
+        },
+        "types": [
+            {
+                "associationCategory": "HUBSPOT_DEFINED",
+                "associationTypeId": 198  # Contact to email association type
+            }
+        ]
+    }
+    associations.append(contact_association)
+    
+    # Add owner association if present in request
+    if 'hubspot_owner_id' in properties:
+        owner_id = properties.pop('hubspot_owner_id')  # Remove from properties
+        owner_association = {
+            "to": {
+                "id": owner_id
+            },
+            "types": [
+                {
+                    "associationCategory": "HUBSPOT_DEFINED",
+                    "associationTypeId": 210  # User to email association type
+                }
+            ]
+        }
+        associations.append(owner_association)
+        
+        # Add the owner_id as a property too
+        properties['hubspot_owner_id'] = owner_id
+    
+    # Call the service function to create the email
+    from hubspot_service import create_email
+    result = create_email(properties, associations)
+    
+    if not result:
+        return jsonify({"error": "Failed to create email"}), 500
+    
+    return jsonify(result), 201  # 201 Created

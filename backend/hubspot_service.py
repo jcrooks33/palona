@@ -58,7 +58,7 @@ def fetch_engagements(lead_id):
         return data
     return None
 
-    
+
 def fetch_recent_leads(limit=100, days_back=7):
     """
     Fetches leads created within the specified time period.
@@ -130,4 +130,33 @@ def fetch_recent_leads(limit=100, days_back=7):
         print(f"Error fetching recent leads: {response.status_code} - {response.text}")
         return None
 
-
+def create_email(properties, associations):
+    """
+    Creates a new email engagement in HubSpot.
+    
+    Args:
+        properties: Dictionary of email properties (subject, body, etc.)
+        associations: Optional dictionary of associations to link the email to contacts, companies, etc.
+    
+    Returns:
+        Created email data or None if the request fails
+    """
+    url = f"{BASE_URL}/crm/v3/objects/emails"
+    headers = {
+        'Authorization': f"Bearer {HUBSPOT_API_KEY}",
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        "properties": properties
+    }
+    
+    if associations:
+        payload["associations"] = associations
+    
+    response = requests.post(url, headers=headers, json=payload)
+    if response.status_code == 201:  # 201 Created
+        return response.json()
+    else:
+        print(f"Error creating email: {response.status_code} - {response.text}")
+        return None

@@ -5,6 +5,7 @@ function App() {
   const [leadId, setLeadId] = useState('');
   const [email, setEmail] = useState('');
   const [error, setError] = useState(null);
+  const [recentLeads, setRecentLeads] = useState([]);
   
   // Add a state cache object to store fetched data
   const [dataCache, setDataCache] = useState({
@@ -12,7 +13,8 @@ function App() {
     emailLeads: {}, // Will store lead data by email
     engagements: {}, // Will store engagement data by lead ID
     draftEmails: {}, // Will store generated emails by lead ID
-    draftSummaries: {} // Will store summaries by lead ID
+    draftSummaries: {}, // Will store summaries by lead ID
+    recentLeads: {} // Will store recent leads by query parameters
   });
   
   // Display state variables
@@ -28,7 +30,9 @@ function App() {
     emailLead: false,
     engagements: false,
     draftEmail: false,
-    draftSummary: false
+    draftSummary: false,
+    recentLeads: false,
+    sendEmail: false 
   });
   
   // Enhanced fetch function that uses the cache
@@ -89,6 +93,16 @@ function App() {
       });
   }, [dataCache]);
   
+  const getRecentLeads = useCallback((limit = 20, days = 7) => {
+    return fetchData(
+      `/api/leads/recent?limit=${limit}&days=${days}`,
+      `${limit}_${days}`,
+      'recentLeads',
+      setRecentLeads,
+      'recentLeads'
+    );
+  }, [fetchData]);
+
   // Function to get lead data
   const getLeadData = useCallback((id) => {
     return fetchData(`/api/leads/${id}`, id, 'leads', setLeadData, 'lead');
@@ -154,6 +168,94 @@ function App() {
       .catch(err => setError(err.message));
   }, [getLeadData, getEngagements, generateDraftEmail, generateSummary]);
 
+// Function to send the email to HubSpot
+const sendEmail = useCallback((id, emailText) => {
+  setError(null);
+  
+  // Set loading state
+  setLoading(prev => ({ ...prev, sendEmail: true }));
+  
+  // Prepare the email data
+  const emailData = {
+    properties: {
+      hs_email_subject: `Follow up from ${dataCache.leads[id]?.name || 'our team'}`,
+      hs_email_text: emailText,
+      hs_email_direction: 'EMAIL',
+      // You can add more properties here if needed
+    }
+  };
+  
+  // Call the API to send the email
+  return fetch(`/api/leads/create_email/${id}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(emailData)
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      return res.json();
+    })
+    .then((data) => {
+      // Success message or action
+      alert('Email sent successfully!');
+      return data;
+    })
+    .catch((err) => {
+      setError(`Failed to send email: ${err.message}`);
+      throw err;
+    })
+    .finally(() => {
+      setLoading(prev => ({ ...prev, sendEmail: false }));
+    });
+}, [dataCache.leads]);
+
+// Display leads in a table format
+const renderLeads = (leads) => {
+  if (!leads || !leads.leads || leads.leads.length === 0) 
+    return <p className="text-gray-500">No leads found.</p>;
+  
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full bg-white">
+        <thead>
+          <tr className="bg-gray-100 text-gray-700 text-left">
+            <th className="py-2 px-3 text-sm font-semibold">Name</th>
+            <th className="py-2 px-3 text-sm font-semibold">Email</th>
+            <th className="py-2 px-3 text-sm font-semibold">Company</th>
+            <th className="py-2 px-3 text-sm font-semibold">Job Title</th>
+            <th className="py-2 px-3 text-sm font-semibold">Created Date</th>
+            <th className="py-2 px-3 text-sm font-semibold">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {leads.leads.map((lead) => (
+            <tr key={lead.id} className="border-t hover:bg-gray-50">
+              <td className="py-2 px-3 text-sm">{lead.name}</td>
+              <td className="py-2 px-3 text-sm">{lead.email}</td>
+              <td className="py-2 px-3 text-sm">{lead.company}</td>
+              <td className="py-2 px-3 text-sm">{lead.job_title}</td>
+              <td className="py-2 px-3 text-sm">{new Date(lead.created_date).toLocaleDateString()}</td>
+              <td className="py-2 px-3 text-sm">
+                <button 
+                  onClick={() => {
+                    setLeadId(lead.id);
+                    triggerAIAgent(lead.id);
+                  }}
+                  className="text-blue-600 hover:text-blue-800 mr-2"
+                >
+                  Trigger Agent
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
   // Display lead data in a structured format
   const renderLeadData = (data) => {
     if (!data) return <p className="text-gray-500">No lead data fetched yet.</p>;
@@ -208,6 +310,11 @@ function App() {
     );
   };
 
+  // Load recent leads on component mount
+  useEffect(() => {
+    getRecentLeads();
+  }, [getRecentLeads]);
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-5xl mx-auto">
@@ -218,7 +325,20 @@ function App() {
           </p>
         </header>
 
+        {/* New button layout */}
         <div className="mb-8 space-y-4">
+          {/* Full width button for Recent Leads - now at the top */}
+          <div>
+            <button
+              onClick={() => getRecentLeads()}
+              disabled={loading.recentLeads}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300 w-full"
+            >
+              {loading.recentLeads ? 'Loading...' : 'Fetch Recent Leads'}
+            </button>
+          </div>
+          
+          {/* Lead ID entry field with button */}
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <input
               type="text"
@@ -235,57 +355,14 @@ function App() {
               {loading.lead ? 'Loading...' : 'Fetch Lead by ID'}
             </button>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter Email"
-              className="border p-2 rounded flex-1"
-            />
-            <button
-              onClick={() => getLeadByEmail(email)}
-              disabled={loading.emailLead}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300"
-            >
-              {loading.emailLead ? 'Loading...' : 'Fetch Lead by Email'}
-            </button>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
-            <button
-              onClick={() => getEngagements(leadId)}
-              disabled={loading.engagements}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300 w-full flex-1"
-            >
-              {loading.engagements ? 'Loading...' : 'Fetch Engagements'}
-            </button>
-            <button
-              onClick={() => generateDraftEmail(leadId)}
-              disabled={loading.draftEmail}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300 w-full flex-1"
-            >
-              {loading.draftEmail ? 'Generating...' : 'Generate Draft Email'}
-            </button>
-            <button
-              onClick={() => generateSummary(leadId)}
-              disabled={loading.draftSummary}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300 w-full flex-1"
-            >
-              {loading.draftSummary ? 'Generating...' : 'Generate Interaction Summary'}
-            </button>
-          </div>
-          <div className="mt-4">
-            <button
-              onClick={() => triggerAIAgent(leadId)}
-              disabled={Object.values(loading).some(Boolean)}
-              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 w-full disabled:bg-red-300"
-            >
-              {Object.values(loading).some(Boolean) ? 'Processing...' : 'Trigger Complete AI Agent'}
-            </button>
-          </div>
         </div>
 
-        {error && <p className="mb-4 text-red-500 text-center">Error: {error}</p>}
+        {/* Changed from "Recent Leads" to just "Leads" since it will show both recent and fetched by ID */}
+        <div className="bg-white rounded shadow p-4 mb-6">
+          <h2 className="text-xl font-semibold mb-3 text-gray-700">Leads</h2>
+          {error && <p className="mb-4 text-red-500">Error: {error}</p>}
+          {renderLeads(recentLeads)}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white rounded shadow p-4">
@@ -309,8 +386,12 @@ function App() {
               <div className="whitespace-pre-wrap text-sm text-gray-800">
                 {draftEmail.draftEmail}
                 <div className="mt-4">
-                  <button className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600">
-                    Approve & Send
+                  <button 
+                    onClick={() => sendEmail(leadId, draftEmail.draftEmail)}
+                    disabled={loading.sendEmail}
+                    className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 disabled:bg-green-300"
+                  >
+                    {loading.sendEmail ? 'Sending...' : 'Approve & Send'}
                   </button>
                 </div>
               </div>
