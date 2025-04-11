@@ -1,23 +1,211 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 function App() {
+  // Input state
   const [leadId, setLeadId] = useState('');
   const [email, setEmail] = useState('');
+  const [error, setError] = useState(null);
+  
+  // Add a state cache object to store fetched data
+  const [dataCache, setDataCache] = useState({
+    leads: {}, // Will store lead data by ID
+    emailLeads: {}, // Will store lead data by email
+    engagements: {}, // Will store engagement data by lead ID
+    draftEmails: {}, // Will store generated emails by lead ID
+    draftSummaries: {} // Will store summaries by lead ID
+  });
+  
+  // Display state variables
   const [leadData, setLeadData] = useState(null);
   const [leadEmailData, setLeadEmailData] = useState(null);
   const [engagementData, setEngagementData] = useState(null);
   const [draftEmail, setDraftEmail] = useState(null);
   const [draftSummary, setDraftSummary] = useState(null);
-  const [error, setError] = useState(null);
-
-  const fetchData = (url, setter, asText = false) => {
-    fetch(url)
+  
+  // Loading states for UI feedback
+  const [loading, setLoading] = useState({
+    lead: false,
+    emailLead: false,
+    engagements: false,
+    draftEmail: false,
+    draftSummary: false
+  });
+  
+  // Enhanced fetch function that uses the cache
+  const fetchData = useCallback((url, cacheKey, cacheSection, setter = null, 
+                               loadingKey = null, asText = false) => {
+    // Check if we already have this data in cache
+    if (dataCache[cacheSection] && dataCache[cacheSection][cacheKey]) {
+      // If we have a setter function, call it with the cached data
+      if (setter) {
+        setter(dataCache[cacheSection][cacheKey]);
+      }
+      return Promise.resolve(dataCache[cacheSection][cacheKey]);
+    }
+    
+    // Set loading state if a key was provided
+    if (loadingKey) {
+      setLoading(prev => ({ ...prev, [loadingKey]: true }));
+    }
+    
+    // Otherwise, fetch the data
+    setError(null);
+    return fetch(url)
       .then((res) => {
         if (!res.ok) throw new Error(`Error ${res.status}`);
         return asText ? res.text() : res.json();
       })
-      .then((data) => setter(data))
-      .catch((err) => setError(err.message));
+      .then((data) => {
+        // Update the cache with the new data
+        setDataCache(prevCache => ({
+          ...prevCache,
+          [cacheSection]: {
+            ...prevCache[cacheSection],
+            [cacheKey]: data
+          }
+        }));
+        
+        // If we have a setter function, call it with the data
+        if (setter) {
+          setter(data);
+        }
+        
+        // Reset loading state
+        if (loadingKey) {
+          setLoading(prev => ({ ...prev, [loadingKey]: false }));
+        }
+        
+        return data;
+      })
+      .catch((err) => {
+        setError(err.message);
+        
+        // Reset loading state
+        if (loadingKey) {
+          setLoading(prev => ({ ...prev, [loadingKey]: false }));
+        }
+        
+        throw err;
+      });
+  }, [dataCache]);
+  
+  // Function to get lead data
+  const getLeadData = useCallback((id) => {
+    return fetchData(`/api/leads/${id}`, id, 'leads', setLeadData, 'lead');
+  }, [fetchData]);
+  
+  // Function to get lead by email
+  const getLeadByEmail = useCallback((emailAddress) => {
+    return fetchData(`/api/leads/email/${emailAddress}`, emailAddress, 
+                    'emailLeads', setLeadEmailData, 'emailLead');
+  }, [fetchData]);
+  
+  // Function to get engagements
+  const getEngagements = useCallback((id) => {
+    return fetchData(`/api/leads/engagement/${id}`, id, 'engagements', 
+                    setEngagementData, 'engagements');
+  }, [fetchData]);
+  
+  // Function to generate draft email
+  const generateDraftEmail = useCallback((id) => {
+    // Check if we have lead data first
+    const ensureLeadData = dataCache.leads[id] 
+                          ? Promise.resolve(dataCache.leads[id]) 
+                          : getLeadData(id);
+    
+    return ensureLeadData
+      .then(() => {
+        return fetchData(`/api/leads/draft_email/${id}`, id, 'draftEmails', 
+                        setDraftEmail, 'draftEmail');
+      });
+  }, [fetchData, getLeadData, dataCache.leads]);
+  
+  // Function to generate interaction summary
+  const generateSummary = useCallback((id) => {
+    // Check if we have engagement data first
+    const ensureEngagements = dataCache.engagements[id] 
+                             ? Promise.resolve(dataCache.engagements[id]) 
+                             : getEngagements(id);
+    
+    return ensureEngagements
+      .then(() => {
+        return fetchData(`/api/leads/draft_summary/${id}`, id, 'draftSummaries', 
+                        setDraftSummary, 'draftSummary');
+      });
+  }, [fetchData, getEngagements, dataCache.engagements]);
+  
+  // Function to trigger the complete AI agent workflow
+  const triggerAIAgent = useCallback((id) => {
+    setError(null);
+    
+    // First get the lead data
+    getLeadData(id)
+      .then(() => {
+        // Then get the engagement data
+        return getEngagements(id);
+      })
+      .then(() => {
+        // Generate both email and summary in parallel
+        return Promise.all([
+          generateDraftEmail(id),
+          generateSummary(id)
+        ]);
+      })
+      .catch(err => setError(err.message));
+  }, [getLeadData, getEngagements, generateDraftEmail, generateSummary]);
+
+  // Display lead data in a structured format
+  const renderLeadData = (data) => {
+    if (!data) return <p className="text-gray-500">No lead data fetched yet.</p>;
+    
+    return (
+      <div className="text-sm text-gray-800">
+        <p><strong>Contact ID:</strong> {data.contact_id}</p>
+        <p><strong>Name:</strong> {data.name}</p>
+        <p><strong>Email:</strong> {data.email}</p>
+        <p><strong>Company:</strong> {data.company}</p>
+        <p><strong>Job Title:</strong> {data.job_title}</p>
+        <p><strong>Created Date:</strong> {data.created_date}</p>
+        <p><strong>Updated Date:</strong> {data.updated_date}</p>
+        <p><strong>Archived:</strong> {data.archived ? "Yes" : "No"}</p>
+      </div>
+    );
+  };
+
+  // Display engagements in a structured format
+  const renderEngagements = (data) => {
+    if (!data) return <p className="text-gray-500">No engagement data fetched yet.</p>;
+    
+    // Group engagements by type
+    const groupedEngagements = data.reduce((groups, item) => {
+      const group = groups[item.type] || [];
+      group.push(item);
+      groups[item.type] = group;
+      return groups;
+    }, {});
+    
+    return (
+      <div>
+        {Object.entries(groupedEngagements).map(([type, items]) => (
+          <div key={type} className="mb-6">
+            <h3 className="font-semibold text-lg text-gray-700 mb-2">{type}</h3>
+            <div className="pl-4 border-l-2 border-gray-300">
+              {/* Sort items by date (newest first) */}
+              {items
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .map((engagement, index) => (
+                  <div key={index} className="mb-3">
+                    <div className="flex items-baseline">
+                      <span className="text-gray-500 text-sm mr-3">{engagement.date}:</span>
+                      <span className="text-sm text-gray-800">{engagement.body}</span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -40,10 +228,11 @@ function App() {
               className="border p-2 rounded flex-1"
             />
             <button
-              onClick={() => fetchData(`/api/leads/${leadId}`, setLeadData)}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              onClick={() => getLeadData(leadId)}
+              disabled={loading.lead}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300"
             >
-              Fetch Lead by ID
+              {loading.lead ? 'Loading...' : 'Fetch Lead by ID'}
             </button>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 items-center">
@@ -55,30 +244,43 @@ function App() {
               className="border p-2 rounded flex-1"
             />
             <button
-              onClick={() => fetchData(`/api/leads/email/${email}`, setLeadEmailData)}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+              onClick={() => getLeadByEmail(email)}
+              disabled={loading.emailLead}
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-green-300"
             >
-              Fetch Lead by Email
+              {loading.emailLead ? 'Loading...' : 'Fetch Lead by Email'}
             </button>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <button
-              onClick={() => fetchData(`/api/leads/engagement/${leadId}`, setEngagementData)}
-              className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 w-full sm:w-auto"
+              onClick={() => getEngagements(leadId)}
+              disabled={loading.engagements}
+              className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 w-full sm:w-auto disabled:bg-purple-300"
             >
-              Fetch Engagements
+              {loading.engagements ? 'Loading...' : 'Fetch Engagements'}
             </button>
             <button
-              onClick={() => fetchData(`/api/leads/draft_email/${leadId}`, setDraftEmail)}
-              className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 w-full sm:w-auto"
+              onClick={() => generateDraftEmail(leadId)}
+              disabled={loading.draftEmail}
+              className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 w-full sm:w-auto disabled:bg-yellow-300"
             >
-              Generate Draft Email
+              {loading.draftEmail ? 'Generating...' : 'Generate Draft Email'}
             </button>
             <button
-              onClick={() => fetchData(`/api/leads/draft_summary/${leadId}`, setDraftSummary)}
-              className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full sm:w-auto"
+              onClick={() => generateSummary(leadId)}
+              disabled={loading.draftSummary}
+              className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full sm:w-auto disabled:bg-indigo-300"
             >
-              Generate Interaction Summary
+              {loading.draftSummary ? 'Generating...' : 'Generate Interaction Summary'}
+            </button>
+          </div>
+          <div className="mt-4">
+            <button
+              onClick={() => triggerAIAgent(leadId)}
+              disabled={Object.values(loading).some(Boolean)}
+              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 w-full disabled:bg-red-300"
+            >
+              {Object.values(loading).some(Boolean) ? 'Processing...' : 'Trigger Complete AI Agent'}
             </button>
           </div>
         </div>
@@ -86,85 +288,32 @@ function App() {
         {error && <p className="mb-4 text-red-500 text-center">Error: {error}</p>}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
           <div className="bg-white rounded shadow p-4">
             <h2 className="text-xl font-semibold mb-3 text-gray-700">Lead Data</h2>
-            {leadData ? (
-              <div className="text-sm text-gray-800">
-                <p><strong>Contact ID:</strong> {leadData.contact_id}</p>
-                <p><strong>Name:</strong> {leadData.name}</p>
-                <p><strong>Email:</strong> {leadData.email}</p>
-                <p><strong>Company:</strong> {leadData.company}</p>
-                <p><strong>Job Title:</strong> {leadData.job_title}</p>
-                <p><strong>Created Date:</strong> {leadData.created_date}</p>
-                <p><strong>Updated Date:</strong> {leadData.updated_date}</p>
-                <p><strong>Archived:</strong> {leadData.archived ? "Yes" : "No"}</p>
-              </div>
-            ) : (
-              <p className="text-gray-500">No lead data fetched yet.</p>
-            )}
+            {renderLeadData(leadData)}
           </div>
 
           <div className="bg-white rounded shadow p-4">
             <h2 className="text-xl font-semibold mb-3 text-gray-700">Lead (By Email)</h2>
-            {leadEmailData ? (
-              <div className="text-sm text-gray-800">
-                <p><strong>Contact ID:</strong> {leadEmailData.contact_id}</p>
-                <p><strong>Name:</strong> {leadEmailData.name}</p>
-                <p><strong>Email:</strong> {leadEmailData.email}</p>
-                <p><strong>Company:</strong> {leadEmailData.company}</p>
-                <p><strong>Job Title:</strong> {leadEmailData.job_title}</p>
-                <p><strong>Created Date:</strong> {leadEmailData.created_date}</p>
-                <p><strong>Updated Date:</strong> {leadEmailData.updated_date}</p>
-                <p><strong>Archived:</strong> {leadEmailData.archived ? "Yes" : "No"}</p>
-              </div>
-            ) : (
-              <p className="text-gray-500">No lead email data fetched yet.</p>
-            )}
+            {renderLeadData(leadEmailData)}
           </div>
 
           <div className="bg-white rounded shadow p-4 md:col-span-2">
-  <h2 className="text-xl font-semibold mb-3 text-gray-700">Engagements</h2>
-  {engagementData ? (
-    <div>
-      {/* Group the engagements by type */}
-      {Object.entries(
-        engagementData.reduce((groups, item) => {
-          const group = groups[item.type] || [];
-          group.push(item);
-          groups[item.type] = group;
-          return groups;
-        }, {})
-      ).map(([type, items]) => (
-        <div key={type} className="mb-6">
-          <h3 className="font-semibold text-lg text-gray-700 mb-2">{type}</h3>
-          <div className="pl-4 border-l-2 border-gray-300">
-            {/* Sort items by date (newest first) */}
-            {items
-              .sort((a, b) => new Date(b.date) - new Date(a.date))
-              .map((engagement, index) => (
-                <div key={index} className="mb-3">
-                  <div className="flex items-baseline">
-                    <span className="text-gray-500 text-sm mr-3">{engagement.date}:</span>
-                    <span className="text-sm text-gray-800">{engagement.body}</span>
-                  </div>
-                </div>
-              ))}
+            <h2 className="text-xl font-semibold mb-3 text-gray-700">Engagements</h2>
+            {renderEngagements(engagementData)}
           </div>
-        </div>
-      ))}
-    </div>
-  ) : (
-    <p className="text-gray-500">No engagement data fetched yet.</p>
-  )}
-</div>
 
           <div className="bg-white rounded shadow p-4">
             <h2 className="text-xl font-semibold mb-3 text-gray-700">Draft Email</h2>
             {draftEmail ? (
-              <pre className="whitespace-pre-wrap text-sm text-gray-800">
+              <div className="whitespace-pre-wrap text-sm text-gray-800">
                 {draftEmail.draftEmail}
-              </pre>
+                <div className="mt-4">
+                  <button className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600">
+                    Approve & Send
+                  </button>
+                </div>
+              </div>
             ) : (
               <p className="text-gray-500">No draft email generated yet.</p>
             )}
@@ -173,14 +322,13 @@ function App() {
           <div className="bg-white rounded shadow p-4">
             <h2 className="text-xl font-semibold mb-3 text-gray-700">Interaction Summary</h2>
             {draftSummary ? (
-              <pre className="whitespace-pre-wrap text-sm text-gray-800">
+              <div className="whitespace-pre-wrap text-sm text-gray-800">
                 {draftSummary.draftSummary}
-              </pre>
+              </div>
             ) : (
               <p className="text-gray-500">No interaction summary generated yet.</p>
             )}
           </div>
-
         </div>
       </div>
     </div>
