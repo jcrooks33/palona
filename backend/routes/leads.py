@@ -37,7 +37,12 @@ def get_lead_email(lead_id):
     if not lead:
         return jsonify({"error": "No lead data"}), 404
     cleaned_client = clean_client_data(lead)
-    return jsonify(generate_intro_email(cleaned_client, {"name": "Jeffrey Crooks", "company": "Palona", "title": "GTM Engineer"}))
+    email_text = generate_intro_email(cleaned_client, {
+        "name": "Jeffrey Crooks",
+        "company": "Palona",
+        "title": "GTM Engineer"
+    })
+    return jsonify({ "draftEmail": email_text })
     
 @leads_blueprint.route('/draft_summary/<lead_id>', methods=['GET'])
 def get_lead_interaction_summary(lead_id):
@@ -45,4 +50,5 @@ def get_lead_interaction_summary(lead_id):
     if not raw:
         return jsonify({"error": "No engagement data"}), 404
     interactions = extract_engagement_summary(raw)
-    return jsonify(generate_contact_summary(interactions))
+    summary_text = generate_contact_summary(interactions)
+    return jsonify({ "draftSummary": summary_text })
