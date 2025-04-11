@@ -108,9 +108,16 @@ function App() {
           <div className="bg-white rounded shadow p-4">
             <h2 className="text-xl font-semibold mb-3 text-gray-700">Lead (By Email)</h2>
             {leadEmailData ? (
-              <pre className="whitespace-pre-wrap text-sm text-gray-800">
-                {JSON.stringify(leadEmailData, null, 2)}
-              </pre>
+              <div className="text-sm text-gray-800">
+                <p><strong>Contact ID:</strong> {leadEmailData.contact_id}</p>
+                <p><strong>Name:</strong> {leadEmailData.name}</p>
+                <p><strong>Email:</strong> {leadEmailData.email}</p>
+                <p><strong>Company:</strong> {leadEmailData.company}</p>
+                <p><strong>Job Title:</strong> {leadEmailData.job_title}</p>
+                <p><strong>Created Date:</strong> {leadEmailData.created_date}</p>
+                <p><strong>Updated Date:</strong> {leadEmailData.updated_date}</p>
+                <p><strong>Archived:</strong> {leadEmailData.archived ? "Yes" : "No"}</p>
+              </div>
             ) : (
               <p className="text-gray-500">No lead email data fetched yet.</p>
             )}
