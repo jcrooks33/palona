@@ -57,3 +57,77 @@ def fetch_engagements(lead_id):
         set_cached(cache_key, data)
         return data
     return None
+
+    
+def fetch_recent_leads(limit=100, days_back=7):
+    """
+    Fetches leads created within the specified time period.
+    
+    Args:
+        limit: Maximum number of leads to return
+        days_back: How many days back to look for new leads
+    
+    Returns:
+        List of recent leads or None if the request fails
+    """
+    url = f"{BASE_URL}/crm/v3/objects/contacts/search"
+    headers = {
+        'Authorization': f"Bearer {HUBSPOT_API_KEY}",
+        'Content-Type': 'application/json'
+    }
+    
+    # Calculate the timestamp for N days ago
+    import time
+    from datetime import datetime, timedelta
+    
+    # Get timestamp for days_back days ago (in milliseconds for HubSpot)
+    days_ago = datetime.now() - timedelta(days=days_back)
+    timestamp = int(days_ago.timestamp() * 1000)
+    
+    payload = {
+        "filterGroups": [
+            {
+                "filters": [
+                    {
+                        "propertyName": "createdate",
+                        "operator": "GTE",
+                        "value": str(timestamp)
+                    }
+                ]
+            }
+        ],
+        "sorts": [
+            {
+                "propertyName": "createdate",
+                "direction": "DESCENDING"
+            }
+        ],
+        "properties": [
+            "firstname", 
+            "lastname", 
+            "email", 
+            "company",
+            "jobtitle",
+            "createdate",
+            "hs_object_id"
+        ],
+        "limit": limit
+    }
+
+    cache_key = f"recent_leads_{days_back}_{limit}"
+    cached_data = get_cached(cache_key)
+    
+    if cached_data:
+        return cached_data
+        
+    response = requests.post(url, headers=headers, json=payload)
+    if response.status_code == 200:
+        data = response.json()
+        # Cache for a shorter period since we want relatively fresh data
+        set_cached(cache_key, data, expire_minutes=5)
+        return data
+    else:
+        print(f"Error fetching recent leads: {response.status_code} - {response.text}")
+        return None
+
+
