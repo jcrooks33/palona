@@ -6,7 +6,7 @@ from openai_service import generate_intro_email, generate_contact_summary, gener
 leads_blueprint = Blueprint('leads', __name__)
 
 
-
+#grab lead information by ID
 @leads_blueprint.route('/<lead_id>', methods=['GET'])
 def get_lead(lead_id):
     lead = fetch_lead_by_id(lead_id)
@@ -16,6 +16,7 @@ def get_lead(lead_id):
     cleaned_client = clean_client_data(lead)
     return jsonify(cleaned_client)
 
+#grab lead engagements by ID
 @leads_blueprint.route('/engagement/<lead_id>', methods=['GET'])
 def get_engagement(lead_id):
     raw = fetch_engagements(lead_id)
@@ -24,6 +25,7 @@ def get_engagement(lead_id):
     interactions = extract_engagement_summary(raw)
     return jsonify(interactions)
 
+#draft email based on lead
 @leads_blueprint.route('/draft_email/<lead_id>', methods=['GET'])
 def get_lead_email(lead_id):
     lead = fetch_lead_by_id(lead_id)
@@ -36,7 +38,8 @@ def get_lead_email(lead_id):
         "title": "GTM Engineer"
     })
     return jsonify({ "draftEmail": email_text })
-    
+
+#draft summary of engagements based on lead  
 @leads_blueprint.route('/draft_summary/<lead_id>', methods=['GET'])
 def get_lead_interaction_summary(lead_id):
     raw = fetch_engagements(lead_id)
@@ -46,6 +49,7 @@ def get_lead_interaction_summary(lead_id):
     summary_text = generate_contact_summary(interactions)
     return jsonify({ "draftSummary": summary_text })
 
+#returns most recent created contacts
 @leads_blueprint.route('/recent', methods=['GET'])
 def get_recent_leads():
     # Get query parameters with defaults
@@ -53,15 +57,14 @@ def get_recent_leads():
     days = request.args.get('days', default=7, type=int)
     
     # Validate and cap the parameters for safety
-    limit = min(limit, 100)  # Don't allow more than 100
-    days = min(days, 30)     # Don't allow more than 30 days back
+    limit = min(limit, 100)  
+    days = min(days, 30)     
     
     leads = fetch_recent_leads(limit=limit, days_back=days)
     
     if not leads:
         return jsonify({"error": "No recent leads found"}), 404
         
-    # Process the results to make them more usable in the frontend
     simplified_leads = []
     for lead in leads.get("results", []):
         properties = lead.get("properties", {})
@@ -76,39 +79,7 @@ def get_recent_leads():
     
     return jsonify({"leads": simplified_leads})
 
-def create_email(properties, associations):
-    url = f"{BASE_URL}/crm/v3/objects/emails"
-    headers = {
-        'Authorization': f"Bearer {HUBSPOT_API_KEY}",
-        'Content-Type': 'application/json'
-    }
-    
-    # Ensure hs_timestamp exists as it's required
-    if 'hs_timestamp' not in properties:
-        from datetime import datetime
-        # Current time in milliseconds or UTC format
-        properties['hs_timestamp'] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-    
-    payload = {
-        "properties": properties
-    }
-    
-    # Use the correct association format from the documentation
-    if associations:
-        payload["associations"] = associations
-    
-    response = requests.post(url, headers=headers, json=payload)
-    
-    # Log the full request and response for debugging
-    print(f"Request payload: {payload}")
-    print(f"Response: {response.status_code} - {response.text}")
-    
-    if response.status_code == 201:  # 201 Created
-        return response.json()
-    else:
-        print(f"Error creating email: {response.status_code} - {response.text}")
-        return None
-
+# add email to hubspot
 @leads_blueprint.route('/create_email/<lead_id>', methods=['POST'])
 def create_email_for_contact(lead_id):
     # Get the JSON data from the request
@@ -181,7 +152,7 @@ def create_email_for_contact(lead_id):
     
     return jsonify(result), 201  # 201 Created
 
-
+# create next step plan from lead context
 @leads_blueprint.route('/next_steps/<lead_id>', methods=['POST'])
 def get_next_steps(lead_id):
     # Get the JSON data from the request
@@ -219,6 +190,7 @@ def get_next_steps(lead_id):
     
     return jsonify({"nextSteps": next_steps})
 
+# add sumamry or next steps to HubSpot as note
 @leads_blueprint.route('/create_note/<lead_id>', methods=['POST'])
 def create_note_for_contact(lead_id):
     data = request.get_json()
@@ -256,6 +228,7 @@ def create_note_for_contact(lead_id):
     
     return jsonify(result), 201
 
+# rates lead, returns an intent (high, medium, low)
 @leads_blueprint.route('/segment/<lead_id>', methods=['GET'])
 def get_lead_segment_route(lead_id):
     lead = fetch_lead_by_id(lead_id)
