@@ -9,7 +9,7 @@ Python
 
 Node.js and npm
 
-HubSpop API credentials (create a HubSpot Private App and set your API key/token)
+HubSpot API credentials (create a HubSpot Private App and set your API key/token)
 
 OpenAI API key
 
