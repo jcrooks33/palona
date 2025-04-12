@@ -29,12 +29,18 @@ def generate_intro_email(contact, user_info):
             "Include a call-to-action to schedule a call."
         )
     }
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[system_message, user_message],
-    )
-    email_text = response.choices[0].message.content
-    return email_text
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[system_message, user_message],
+        )
+        email_text = response.choices[0].message.content
+        return email_text
+    except openai_error.OpenAIError as e:
+        # Log error or raise a custom exception if desired
+        raise Exception(f"Error generating introductory email: {str(e)}")
+    except Exception as ex:
+        raise Exception(f"Unexpected error during email generation: {str(ex)}")
 
 
 def generate_contact_summary(contact):
@@ -48,12 +54,17 @@ def generate_contact_summary(contact):
             f"Here is the lead’s interaction history: {contact}. Please summarize the key points of the communications with this lead in a few sentences. Focus on the leads interests, questions, and any follow-up items mentioned"
         )
     }
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[system_message, user_message],
-    )
-    email_text = response.choices[0].message.content
-    return email_text
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[system_message, user_message],
+        )
+        summary_text = response.choices[0].message.content
+        return summary_text
+    except openai_error.OpenAIError as e:
+        raise Exception(f"Error generating contact summary: {str(e)}")
+    except Exception as ex:
+        raise Exception(f"Unexpected error during summary generation: {str(ex)}")
 
 def generate_next_steps(client_data, interactions, draft_email, draft_summary, user_info):
     print('hit')
@@ -77,27 +88,22 @@ def generate_next_steps(client_data, interactions, draft_email, draft_summary, u
                 These should be tailored to the lead's industry, recent interactions, and current engagement level.
                 Include timeframes for when these actions should occur (e.g., "in 3 days if no response").
             """
-
-    # Call the OpenAI API
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",  # Use the appropriate model
-        messages=[
-            {"role": "system", "content": "You are an expert sales assistant helping with lead engagement strategy."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.7,
-        max_tokens=500
-    )
-    
-    # Extract and return the generated next steps
-    next_steps = response.choices[0].message.content.strip()
-    return next_steps
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",  # Use the appropriate model
+            messages=[
+                {"role": "system", "content": "You are an expert sales assistant helping with lead engagement strategy."},
+                {"role": "user", "content": prompt}
+            ],
+        )
+        next_steps = response.choices[0].message.content.strip()
+        return next_steps
+    except openai_error.OpenAIError as e:
+        raise Exception(f"Error generating next steps: {str(e)}")
+    except Exception as ex:
+        raise Exception(f"Unexpected error during next steps generation: {str(ex)}")
 
 def generate_lead_segment(profile, interactions):
-    """
-    Generate an AI-driven lead segmentation category based on the lead profile and engagement history.
-    The response should be one of: "High Intent", "Moderate Interest", or "Cold Lead".
-    """
     system_message = {
         "role": "system",
         "content": ("You are an AI assistant that categorizes sales leads. Review the lead's profile and engagement history "
@@ -122,11 +128,14 @@ def generate_lead_segment(profile, interactions):
         "Respond with only the category."
     )
     user_message = { "role": "user", "content": user_prompt }
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",  # Change to your model if needed.
-        messages=[system_message, user_message],
-        temperature=0.5,
-        max_tokens=20
-    )
-    category = response.choices[0].message.content.strip()
-    return category
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",  # Change to your model if needed.
+            messages=[system_message, user_message],
+        )
+        category = response.choices[0].message.content.strip()
+        return category
+    except openai_error.OpenAIError as e:
+        raise Exception(f"Error generating lead segment: {str(e)}")
+    except Exception as ex:
+        raise Exception(f"Unexpected error during lead segmentation: {str(ex)}")
