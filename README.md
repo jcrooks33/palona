@@ -96,6 +96,8 @@ Summarize prior communications,
 
 Propose concrete next steps.
 
+Return a score of high, medium, or low based on context. 
+
 <br>
 
 ## Review & Act:
@@ -153,5 +155,10 @@ Save AI-generated notes back to HubSpot.
 
 POST /api/leads/create_email/<lead_id>
 Log an email engagement in HubSpot after approval.
+
+<br>
+
+GET /api/leads/segment/<lead_id>
+Returns a score of high, medium, or low intent based on lead context.
 
 <br>

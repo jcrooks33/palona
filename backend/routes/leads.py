@@ -77,16 +77,6 @@ def get_recent_leads():
     return jsonify({"leads": simplified_leads})
 
 def create_email(properties, associations):
-    """
-    Creates a new email engagement in HubSpot.
-    
-    Args:
-        properties: Dictionary of email properties (subject, body, etc.)
-        associations: Optional list of associations to link the email to contacts, companies, etc.
-    
-    Returns:
-        Created email data or None if the request fails
-    """
     url = f"{BASE_URL}/crm/v3/objects/emails"
     headers = {
         'Authorization': f"Bearer {HUBSPOT_API_KEY}",
