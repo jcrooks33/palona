@@ -1,4 +1,4 @@
-// File: src/components/LeadList.js
+// File: src/components/LeadList.jsx
 import React from 'react';
 
 const LeadList = ({ recentLeads, triggerAIAgent, setLeadId }) => {

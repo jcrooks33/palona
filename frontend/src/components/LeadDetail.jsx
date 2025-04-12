@@ -1,4 +1,4 @@
-// File: src/components/LeadDetail.js
+// File: src/components/LeadDetail.jsx
 import React from 'react';
 
 const LeadDetail = ({ leadData }) => {

@@ -1,4 +1,4 @@
-// File: src/Dashboard.js
+// File: src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { useLeadApi } from './hooks/useLeadApi';
 import LeadSearch from './components/LeadSearch';
@@ -76,13 +76,13 @@ const Dashboard = () => {
             draftEmail={draftEmail} 
             leadId={leadId} 
             sendEmail={sendEmail} 
-            loadingEmail={loading.sendEmail}
+            loadingEmail={loading.draftEmail}
           />
           <DraftSummary 
             draftSummary={draftSummary} 
             leadId={leadId} 
             createNote={createNote} 
-            loadingNote={loading.saveSummaryNote}
+            loadingNote={loading.draftSummary}
           />
           <NextSteps 
             nextSteps={nextSteps} 

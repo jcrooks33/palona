@@ -1,4 +1,4 @@
-// File: src/components/LeadSearch.js
+// File: src/components/LeadSearch.jsx
 import React from 'react';
 
 const LeadSearch = ({ leadId, setLeadId, getLeadData, triggerAIAgent, loading }) => {

@@ -1,4 +1,4 @@
-// File: src/components/NextSteps.js
+// File: src/components/NextSteps.jsx
 import React from 'react';
 
 const NextSteps = ({ nextSteps, leadId, createNote, loadingNote, loadingNextSteps }) => {

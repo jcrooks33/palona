@@ -1,10 +1,12 @@
-// File: src/components/DraftSummary.js
+// File: src/components/DraftSummary.jsx
 import React from 'react';
 
 const DraftSummary = ({ draftSummary, leadId, createNote, loadingNote }) => {
   return (
     <div className="bg-white rounded shadow p-4">
-      <h2 className="text-xl font-semibold mb-3 text-gray-700">Interaction Summary</h2>
+      <h2 className="text-xl font-semibold mb-3 text-gray-700">Interaction Summary
+      {loadingNote && <span className="ml-2 text-sm text-blue-500">Loading...</span>}
+      </h2>
       {draftSummary ? (
         <div className="whitespace-pre-wrap text-sm text-gray-800">
           {draftSummary.draftSummary}
