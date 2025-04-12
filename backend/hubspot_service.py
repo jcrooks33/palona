@@ -161,3 +161,41 @@ def create_email(properties, associations):
         print(f"Error creating email: {response.status_code} - {response.text}")
         return None
 
+def create_note(properties, associations):
+    """
+    Creates a new note in HubSpot.
+    
+    Args:
+        properties: Dictionary of note properties (body, timestamp, etc.)
+        associations: Optional dictionary of associations to link the note to contacts, companies, etc.
+    
+    Returns:
+        Created note data or None if the request fails
+    """
+    url = f"{BASE_URL}/crm/v3/objects/notes"
+    headers = {
+        'Authorization': f"Bearer {HUBSPOT_API_KEY}",
+        'Content-Type': 'application/json'
+    }
+    
+    # Ensure hs_timestamp exists as it's required
+    if 'hs_timestamp' not in properties:
+        from datetime import datetime
+        # Current time in milliseconds or UTC format
+        properties['hs_timestamp'] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    
+    payload = {
+        "properties": properties
+    }
+    
+    # Use the correct association format from the documentation
+    if associations:
+        payload["associations"] = associations
+    
+    response = requests.post(url, headers=headers, json=payload)
+    
+    if response.status_code == 201:  # 201 Created
+        return response.json()
+    else:
+        print(f"Error creating note: {response.status_code} - {response.text}")
+        return None

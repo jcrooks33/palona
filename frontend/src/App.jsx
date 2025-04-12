@@ -36,8 +36,11 @@ function App() {
     draftSummary: false,
     recentLeads: false,
     sendEmail: false,
-    nextSteps: false 
+    nextSteps: false,
+    saveSummaryNote: false,  // Add this new state
+    saveNextStepsNote: false  // Add this new state
   });
+
   
   // Enhanced fetch function that uses the cache
   const fetchData = useCallback((url, cacheKey, cacheSection, setter = null, 
@@ -208,6 +211,48 @@ const generateNextSteps = useCallback((id, emailData, summaryData) => {
       });
   }, [fetchData, getEngagements, dataCache.engagements]);
   
+// Function to create a note in HubSpot
+const createNote = useCallback((id, noteText, noteType) => {
+  setError(null);
+  
+  // Set loading state based on the type of note
+  setLoading(prev => ({ ...prev, [`save${noteType}Note`]: true }));
+  
+  // Prepare the note data
+  const noteData = {
+    properties: {
+      hs_note_body: noteText,
+      // You can add more properties here if needed
+    }
+  };
+  
+  // Call the API to create the note
+  return fetch(`/api/leads/create_note/${id}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(noteData)
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      return res.json();
+    })
+    .then((data) => {
+      // Success message or action
+      alert(`${noteType} saved to HubSpot as a note!`);
+      return data;
+    })
+    .catch((err) => {
+      setError(`Failed to save ${noteType} as note: ${err.message}`);
+      throw err;
+    })
+    .finally(() => {
+      setLoading(prev => ({ ...prev, [`save${noteType}Note`]: false }));
+    });
+}, []);
+
+
 // Function to trigger the complete AI agent workflow
 // Function to trigger the complete AI agent workflow
 const triggerAIAgent = useCallback((id) => {
@@ -482,6 +527,15 @@ const renderLeads = (leads) => {
             {draftSummary ? (
               <div className="whitespace-pre-wrap text-sm text-gray-800">
                 {draftSummary.draftSummary}
+                <div className="mt-4">
+                  <button 
+                    onClick={() => createNote(leadId, draftSummary.draftSummary, 'Summary')}
+                    disabled={loading.saveSummaryNote}
+                    className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 disabled:bg-blue-300"
+                  >
+                    {loading.saveSummaryNote ? 'Saving...' : 'Save to HubSpot'}
+                  </button>
+                </div>
               </div>
             ) : (
               <p className="text-gray-500">No interaction summary generated yet.</p>
@@ -492,7 +546,22 @@ const renderLeads = (leads) => {
               Recommended Next Steps
               {loading.nextSteps && <span className="ml-2 text-sm text-blue-500">Loading...</span>}
             </h2>
-            {renderNextSteps(nextSteps)}
+            {nextSteps ? (
+              <div className="whitespace-pre-wrap text-sm text-gray-800">
+                {nextSteps.nextSteps}
+                <div className="mt-4">
+                  <button 
+                    onClick={() => createNote(leadId, nextSteps.nextSteps, 'NextSteps')}
+                    disabled={loading.saveNextStepsNote}
+                    className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 disabled:bg-blue-300"
+                  >
+                    {loading.saveNextStepsNote ? 'Saving...' : 'Save to HubSpot'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-500">No next steps recommendations yet.</p>
+            )}
           </div>
         </div>
       </div>

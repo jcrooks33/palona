@@ -15,7 +15,7 @@ def generate_intro_email(contact, user_info):
 
     system_message = {
             "role": "system",
-            "content": "You are a helpful sales assistant who drafts summaries of previous client interactions."
+            "content": "You are a helpful sales assistant who drafts introduction emails to potential clients that are tailored to their profile. Palona AI is a cutting-edge platform that empowers consumer-facing businesses to deploy emotionally intelligent, brand-aligned AI sales agents. These agents seamlessly integrate with existing systems like websites, point-of-sale (POS) systems, product catalogs, and social channels, providing 24/7 conversational ordering and customer service. Key Features:Brand Consistency: Palonas AI agents are tailored to reflect each brands unique voice and identity. For instance, Pizza My Heart utilizes Jimmy the Surfer, an AI persona that embodies their brand's character and interacts with customers via text or voice to facilitate orders. Emotional Intelligence (EQ): Built with proprietary models emphasizing high emotional intelligence, Palonas agents engage customers with empathy, humor, and persuasive communication, enhancing the overall customer experience. Multimodal Integration: The platform supports various communication channels, including SMS, chat, and direct messages, ensuring consistent and personalized interactions across all customer touchpoints.Operational Efficiency: Palonas agents boast high accuracy rates (93.3 percent for voice and 95 percent for text), reducing errors and the need for human intervention, thereby streamlining operations and improving customer satisfaction."
         }
     user_message = {
         "role": "user",
@@ -40,13 +40,12 @@ def generate_intro_email(contact, user_info):
 def generate_contact_summary(contact):
     system_message = {
             "role": "system",
-            "content": "You are a helpful sales email assistant who drafts personalized outreach emails."
+            "content": "You are an AI assistant that summarizes sales lead communications."
         }
     user_message = {
         "role": "user",
         "content": (
-            f"Lead Interactions History: {contact}\n"
-            "Summarize prior communications with the lead, "
+            f"Here is the lead’s interaction history: {contact}. Please summarize the key points of the communications with this lead in a few sentences. Focus on the leads interests, questions, and any follow-up items mentioned"
         )
     }
     response = client.chat.completions.create(
@@ -57,21 +56,6 @@ def generate_contact_summary(contact):
     return email_text
 
 def generate_next_steps(client_data, interactions, draft_email, draft_summary, user_info):
-    """
-    Generate recommended next steps for lead engagement based on all available context
-    
-    Args:
-        client_data: Cleaned lead/client data
-        interactions: List of previous interactions with the lead
-        draft_email: The draft email that was generated
-        draft_summary: The interaction summary that was generated
-        user_info: Information about the user making the request
-        
-    Returns:
-        String containing recommended next steps
-    """
-    
-    # Construct the prompt for OpenAI
     print('hit')
     prompt = f"""
                 Based on the following information about a sales lead, their engagement history, and a recent draft email,
@@ -89,14 +73,14 @@ def generate_next_steps(client_data, interactions, draft_email, draft_summary, u
                 USER INFO:
                 {user_info}
 
-                Provide 2-3 specific, actionable next steps that would be appropriate to take after sending the draft email.
+                Provide 2-3 specific, actionable next steps (in a numbered list) that would be appropriate to take after sending the draft email.
                 These should be tailored to the lead's industry, recent interactions, and current engagement level.
                 Include timeframes for when these actions should occur (e.g., "in 3 days if no response").
             """
 
     # Call the OpenAI API
     response = client.chat.completions.create(
-        model="gpt-4",  # Use the appropriate model
+        model="gpt-4o-mini",  # Use the appropriate model
         messages=[
             {"role": "system", "content": "You are an expert sales assistant helping with lead engagement strategy."},
             {"role": "user", "content": prompt}

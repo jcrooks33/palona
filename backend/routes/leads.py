@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from hubspot_service import fetch_lead_by_id, fetch_lead_by_email, fetch_engagements, fetch_recent_leads
+from hubspot_service import fetch_lead_by_id, fetch_lead_by_email, fetch_engagements, fetch_recent_leads,create_note
 from ai_service import extract_engagement_summary, clean_client_data
 from openai_service import generate_intro_email, generate_contact_summary, generate_next_steps
 
@@ -236,3 +236,40 @@ def get_next_steps(lead_id):
     next_steps = generate_next_steps(cleaned_client, interactions, draft_email, draft_summary, user_info)
     
     return jsonify({"nextSteps": next_steps})
+
+@leads_blueprint.route('/create_note/<lead_id>', methods=['POST'])
+def create_note_for_contact(lead_id):
+    data = request.get_json()
+    
+    if not data or not isinstance(data, dict):
+        return jsonify({"error": "Invalid request format. Expected JSON data"}), 400
+    
+    properties = data.get('properties', {})
+    
+    if 'hs_note_body' not in properties:
+        return jsonify({"error": "Missing required fields. Note must have body content"}), 400
+    
+    if 'hs_timestamp' not in properties:
+        from datetime import datetime
+        properties['hs_timestamp'] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    
+    associations = [
+    {
+        "to": {"id": lead_id},
+        "types": [
+            {
+                "associationCategory": "HUBSPOT_DEFINED",
+                "associationTypeId": 202
+            }
+        ]
+    }
+]
+
+    
+    from hubspot_service import create_note
+    result = create_note(properties, associations)
+    
+    if not result:
+        return jsonify({"error": "Failed to create note"}), 500
+    
+    return jsonify(result), 201
