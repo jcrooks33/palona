@@ -92,3 +92,41 @@ def generate_next_steps(client_data, interactions, draft_email, draft_summary, u
     # Extract and return the generated next steps
     next_steps = response.choices[0].message.content.strip()
     return next_steps
+
+def generate_lead_segment(profile, interactions):
+    """
+    Generate an AI-driven lead segmentation category based on the lead profile and engagement history.
+    The response should be one of: "High Intent", "Moderate Interest", or "Cold Lead".
+    """
+    system_message = {
+        "role": "system",
+        "content": ("You are an AI assistant that categorizes sales leads. Review the lead's profile and engagement history "
+                    "to determine the level of interest. Classify the lead strictly as one of: 'High Intent', 'Moderate Interest', or 'Cold Lead'.")
+    }
+    # Build a text block from the profile
+    profile_text = (
+        f"Name: {profile.get('name', 'N/A')}\n"
+        f"Title: {profile.get('job_title', 'N/A')}\n"
+        f"Company: {profile.get('company', 'N/A')}\n"
+        f"Email: {profile.get('email', 'N/A')}\n"
+        f"Created Date: {profile.get('created_date', 'N/A')}"
+    )
+    # Assume interactions is a list of strings summarizing past engagements.
+    history_text = "No engagement history." if not interactions else "\n".join(
+        [f"- {item['date']}: {item['body']}" for item in interactions]
+    )
+    user_prompt = (
+        f"Lead Profile:\n{profile_text}\n\n"
+        f"Engagement History:\n{history_text}\n\n"
+        "Based on the above, categorize this lead as 'High Intent', 'Moderate Interest', or 'Cold Lead'. "
+        "Respond with only the category."
+    )
+    user_message = { "role": "user", "content": user_prompt }
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",  # Change to your model if needed.
+        messages=[system_message, user_message],
+        temperature=0.5,
+        max_tokens=20
+    )
+    category = response.choices[0].message.content.strip()
+    return category

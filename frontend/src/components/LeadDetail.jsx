@@ -1,7 +1,7 @@
-// File: src/components/LeadDetail.jsx
+// src/components/LeadDetail.jsx
 import React from 'react';
 
-const LeadDetail = ({ leadData }) => {
+const LeadDetail = ({ leadData, leadSegment }) => {
   if (!leadData) {
     return (
       <div className="bg-white rounded shadow p-4 md:col-span-2">
@@ -20,6 +20,7 @@ const LeadDetail = ({ leadData }) => {
         <p><strong>Email:</strong> {leadData.email}</p>
         <p><strong>Company:</strong> {leadData.company}</p>
         <p><strong>Job Title:</strong> {leadData.job_title}</p>
+        <p><strong>Lead Segment:</strong> {leadSegment ? leadSegment.segment : "Not yet segmented"}</p>
         <p><strong>Created Date:</strong> {leadData.created_date}</p>
         <p><strong>Updated Date:</strong> {leadData.updated_date}</p>
         <p><strong>Archived:</strong> {leadData.archived ? "Yes" : "No"}</p>

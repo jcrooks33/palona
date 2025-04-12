@@ -8,7 +8,8 @@ export function useLeadApi() {
     draftEmails: {},
     draftSummaries: {},
     recentLeads: {},
-    nextSteps: {}
+    nextSteps: {},
+    segments: {}
   });
   const [loading, setLoading] = useState({
     lead: false,
@@ -19,7 +20,8 @@ export function useLeadApi() {
     sendEmail: false,
     nextSteps: false,
     saveSummaryNote: false,
-    saveNextStepsNote: false
+    saveNextStepsNote: false,
+    segment: false
   });
   const [error, setError] = useState(null);
 
@@ -29,6 +31,7 @@ export function useLeadApi() {
   const [draftEmail, setDraftEmail] = useState(null);
   const [draftSummary, setDraftSummary] = useState(null);
   const [nextSteps, setNextSteps] = useState(null);
+  const [leadSegment, setLeadSegment] = useState(null);
 
   // General-purpose fetch function with caching
   const fetchData = useCallback((url, cacheKey, cacheSection, setter = null, loadingKey = null, asText = false) => {
@@ -114,6 +117,14 @@ export function useLeadApi() {
       return fetchData(`/api/leads/draft_summary/${id}`, id, 'draftSummaries', setDraftSummary, 'draftSummary');
     });
   }, [fetchData, getEngagements, dataCache.engagements]);
+
+  const getLeadSegment = useCallback((id) => {
+    setLoading(prev => ({ ...prev, segment: true }));
+    return fetchData(`/api/leads/segment/${id}`, id, 'segments', setLeadSegment, 'segment')
+      .finally(() => {
+        setLoading(prev => ({ ...prev, segment: false }));
+      });
+  }, [fetchData]);
 
   const generateNextSteps = useCallback((id, emailData, summaryData) => {
     setError(null);
@@ -222,12 +233,12 @@ export function useLeadApi() {
     setError(null);
     return getLeadData(id)
       .then(() => getEngagements(id))
-      .then(() => Promise.all([ generateDraftEmail(id), generateSummary(id) ]))
-      .then(([emailResult, summaryResult]) => {
+      .then(() => Promise.all([ generateDraftEmail(id), generateSummary(id), getLeadSegment(id) ]))
+      .then(([emailResult, summaryResult, segmentResult]) => {
         return generateNextSteps(id, emailResult, summaryResult);
       })
       .catch(err => setError(err.message));
-  }, [getLeadData, getEngagements, generateDraftEmail, generateSummary, generateNextSteps]);
+  }, [getLeadData, getEngagements, generateDraftEmail, generateSummary, generateNextSteps, getLeadSegment]);
 
   return {
     dataCache,
@@ -238,6 +249,7 @@ export function useLeadApi() {
     draftEmail,
     draftSummary,
     nextSteps,
+    leadSegment, 
     getRecentLeads,
     getLeadData,
     getEngagements,
@@ -247,5 +259,6 @@ export function useLeadApi() {
     createNote,
     sendEmail,
     triggerAIAgent,
+    getLeadSegment 
   };
 }

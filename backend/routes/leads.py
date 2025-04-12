@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from hubspot_service import fetch_lead_by_id, fetch_engagements, fetch_recent_leads,create_note
 from ai_service import extract_engagement_summary, clean_client_data
-from openai_service import generate_intro_email, generate_contact_summary, generate_next_steps
+from openai_service import generate_intro_email, generate_contact_summary, generate_next_steps, generate_lead_segment
 
 leads_blueprint = Blueprint('leads', __name__)
 
@@ -265,3 +265,16 @@ def create_note_for_contact(lead_id):
         return jsonify({"error": "Failed to create note"}), 500
     
     return jsonify(result), 201
+
+@leads_blueprint.route('/segment/<lead_id>', methods=['GET'])
+def get_lead_segment_route(lead_id):
+    lead = fetch_lead_by_id(lead_id)
+    if not lead:
+        return jsonify({"error": "No lead data"}), 404
+    cleaned_client = clean_client_data(lead)
+    raw_engagements = fetch_engagements(lead_id)
+    interactions = []
+    if raw_engagements:
+        interactions = extract_engagement_summary(raw_engagements)
+    category = generate_lead_segment(cleaned_client, interactions)
+    return jsonify({ "segment": category })

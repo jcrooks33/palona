@@ -20,6 +20,7 @@ const Dashboard = () => {
     draftEmail,
     draftSummary,
     nextSteps,
+    leadSegment, 
     getRecentLeads,
     getLeadData,
     triggerAIAgent,
@@ -66,7 +67,7 @@ const Dashboard = () => {
         {error && <p className="mb-4 text-red-500">Error: {error}</p>}
         <LeadList recentLeads={recentLeads} triggerAIAgent={triggerAIAgent} setLeadId={setLeadId} />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <LeadDetail leadData={leadData} />
+          <LeadDetail leadData={leadData} leadSegment={leadSegment}/>
           <Engagements engagementData={engagementData} />
           
           <DraftEmail 
