@@ -9,6 +9,8 @@ Python
 
 Node.js and npm
 
+<br>
+
 HubSpot API credentials (create a HubSpot Private App and set your API key/token)
 
 OpenAI API key
@@ -19,7 +21,7 @@ OpenAI API key
 
 ### Clone the repo:
 
-clone the repo and cd
+clone the repo
 
 <br>
 
@@ -27,7 +29,7 @@ clone the repo and cd
 
 python -m venv venv
 
-source venv/bin/activate  # Linux/MacOS
+source venv/bin/activate 
 
 <br>
 
@@ -47,7 +49,7 @@ HUBSPOT_KEY=your_hubspot_api_key
 
 OPENAI_KEY=your_openai_api_key
 
- The backend will run on http://127.0.0.1:5000/.
+ The backend will run on http://localhost:5000.
 
 <br>
 
@@ -68,7 +70,7 @@ npm install
 
 npm run dev
 
-The frontend will run on http://localhost:5173 (or whatever port is open for you) and communicates with the Flask backend.
+The frontend will run on http://localhost:5173 and communicates with the Flask backend.
 
 <br>
 
