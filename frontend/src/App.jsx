@@ -3,14 +3,12 @@ import { useState, useEffect, useCallback } from 'react';
 function App() {
   // Input state
   const [leadId, setLeadId] = useState('');
-  const [email, setEmail] = useState('');
   const [error, setError] = useState(null);
   const [recentLeads, setRecentLeads] = useState([]);
   
   // Add a state cache object to store fetched data
   const [dataCache, setDataCache] = useState({
     leads: {}, // Will store lead data by ID
-    emailLeads: {}, // Will store lead data by email
     engagements: {}, // Will store engagement data by lead ID
     draftEmails: {}, // Will store generated emails by lead ID
     draftSummaries: {}, // Will store summaries by lead ID
@@ -20,7 +18,6 @@ function App() {
   
   // Display state variables
   const [leadData, setLeadData] = useState(null);
-  const [leadEmailData, setLeadEmailData] = useState(null);
   const [engagementData, setEngagementData] = useState(null);
   const [draftEmail, setDraftEmail] = useState(null);
   const [draftSummary, setDraftSummary] = useState(null);
@@ -30,7 +27,6 @@ function App() {
   // Loading states for UI feedback
   const [loading, setLoading] = useState({
     lead: false,
-    emailLead: false,
     engagements: false,
     draftEmail: false,
     draftSummary: false,
@@ -169,12 +165,6 @@ const generateNextSteps = useCallback((id, emailData, summaryData) => {
   // Function to get lead data
   const getLeadData = useCallback((id) => {
     return fetchData(`/api/leads/${id}`, id, 'leads', setLeadData, 'lead');
-  }, [fetchData]);
-  
-  // Function to get lead by email
-  const getLeadByEmail = useCallback((emailAddress) => {
-    return fetchData(`/api/leads/email/${emailAddress}`, emailAddress, 
-                    'emailLeads', setLeadEmailData, 'emailLead');
   }, [fetchData]);
   
   // Function to get engagements
@@ -487,14 +477,9 @@ const renderLeads = (leads) => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded shadow p-4">
+          <div className="bg-white rounded shadow p-4 md:col-span-2">
             <h2 className="text-xl font-semibold mb-3 text-gray-700">Lead Data</h2>
             {renderLeadData(leadData)}
-          </div>
-
-          <div className="bg-white rounded shadow p-4">
-            <h2 className="text-xl font-semibold mb-3 text-gray-700">Lead (By Email)</h2>
-            {renderLeadData(leadEmailData)}
           </div>
 
           <div className="bg-white rounded shadow p-4 md:col-span-2">
