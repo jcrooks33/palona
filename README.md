@@ -1,6 +1,6 @@
 # Palona AI Agent
 
-This is an AI Sales Agent that integrates with Hubspot. After selecting a lead the agent will draft an email, summarize previous engagements, and give a recommendation for next steps. In addition to this, it is able to send the email (mock) and add it to Hubspot, along with adding the summary and recommendation to Hubspot as notes. 
+This is an AI Sales Agent that integrates with Hubspot (Private app). After selecting a lead the agent will draft an email, summarize previous engagements, and give a recommendation for next steps. In addition to this, it is able to send the email (mock) and add it to Hubspot, along with adding the summary and recommendation to Hubspot as notes. The agent will also display an intent score with the leads information based off the lead context. 
 
 # Setup & Installation
 
