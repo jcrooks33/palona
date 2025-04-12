@@ -93,7 +93,7 @@ LeadList.jsx: Lists recent leads fetched from HubSpot.
 
 LeadDetail.jsx: Displays the detailed profile of a lead.
 
-Engagements.jsx: Shows a chronologically ordered list of engagement items.
+Engagements.jsx: Shows a grouped and chronologically ordered list of engagement items.
 
 ## AI-Generated Output Display:
 
@@ -101,5 +101,5 @@ DraftEmail.jsx: Presents the AI-generated email draft with an option to send.
 
 DraftSummary.jsx: Displays the summary of prior interactions, with an option to save to HubSpot.
 
-NextSteps.jsx: Lists recommended next steps; may include automated actions such as meeting scheduling.
+NextSteps.jsx: Lists recommended next steps.
 
