@@ -1,4 +1,4 @@
-// File: src/App.jsx
+// In src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { useLeadApi } from './hooks/useLeadApi';
 import LeadSearch from './components/LeadSearch';
@@ -8,6 +8,7 @@ import Engagements from './components/Engagements';
 import DraftEmail from './components/DraftEmail';
 import DraftSummary from './components/DraftSummary';
 import NextSteps from './components/NextSteps';
+import ToastNotification from './components/ToastNotification';
 
 const Dashboard = () => {
   const [leadId, setLeadId] = useState('');
@@ -27,7 +28,8 @@ const Dashboard = () => {
   } = useLeadApi();
 
   const [recentLeads, setRecentLeadsState] = useState(null);
-  
+  const [notification, setNotification] = useState(null);
+
   // Load recent leads on component mount
   useEffect(() => {
     getRecentLeads()
@@ -37,15 +39,14 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      {notification && (
+        <ToastNotification 
+          message={notification} 
+          onClose={() => setNotification(null)} 
+        />
+      )}
       <div className="max-w-5xl mx-auto">
-        <header className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-800">Lead Management Dashboard</h1>
-          <p className="text-gray-600 mt-2">
-            Fetch lead info, engagements, draft email and interaction summary.
-          </p>
-        </header>
-
-        {/* Search / Action Section */}
+        {/* ... existing layout ... */}
         <LeadSearch 
           leadId={leadId} 
           setLeadId={setLeadId}
@@ -53,7 +54,6 @@ const Dashboard = () => {
           triggerAIAgent={triggerAIAgent}
           loading={loading.lead}
         />
-
         <button
           onClick={() => {
             getRecentLeads().then(data => setRecentLeadsState(data));
@@ -63,31 +63,42 @@ const Dashboard = () => {
         >
           {loading.recentLeads ? 'Loading...' : 'Fetch Recent Leads'}
         </button>
-
         {error && <p className="mb-4 text-red-500">Error: {error}</p>}
-
-        {/* Display Leads List */}
         <LeadList recentLeads={recentLeads} triggerAIAgent={triggerAIAgent} setLeadId={setLeadId} />
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <LeadDetail leadData={leadData} />
           <Engagements engagementData={engagementData} />
+          
           <DraftEmail 
             draftEmail={draftEmail} 
             leadId={leadId} 
-            sendEmail={sendEmail} 
+            sendEmail={(id, emailText) => {
+              sendEmail(id, emailText)
+                .then(() => setNotification('Email saved to HubSpot and sent successfully!'))
+                .catch(() => setNotification('Failed to send email'));
+            }} 
             loadingEmail={loading.draftEmail}
           />
+          
           <DraftSummary 
             draftSummary={draftSummary} 
             leadId={leadId} 
-            createNote={createNote} 
+            createNote={(id, noteText, noteType) => {
+              createNote(id, noteText, noteType)
+                .then(() => setNotification(`${noteType} saved to HubSpot as a note!`))
+                .catch(() => setNotification(`Failed to save ${noteType}`));
+            }} 
             loadingNote={loading.draftSummary}
           />
+          
           <NextSteps 
             nextSteps={nextSteps} 
             leadId={leadId} 
-            createNote={createNote} 
+            createNote={(id, noteText, noteType) => {
+              createNote(id, noteText, noteType)
+                .then(() => setNotification('Next steps saved to HubSpot as a note!'))
+                .catch(() => setNotification('Failed to save next steps'));
+            }} 
             loadingNote={loading.saveNextStepsNote}
             loadingNextSteps={loading.nextSteps}
           />
@@ -95,6 +106,6 @@ const Dashboard = () => {
       </div>
     </div>
   );
-}
+};
 
 export default Dashboard;

@@ -16,7 +16,7 @@ const DraftEmail = ({ draftEmail, leadId, sendEmail, loadingEmail }) => {
               disabled={loadingEmail}
               className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 disabled:bg-blue-300"
             >
-              {loadingEmail ? 'Sending...' : 'Save to HubSpot'}
+              {loadingEmail ? 'Sending...' : 'Send email and save to HubSpot'}
             </button>
           </div>
         </div>

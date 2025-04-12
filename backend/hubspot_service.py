@@ -1,6 +1,8 @@
 import os
 import requests
 from cache import get_cached, set_cached
+import time
+from datetime import datetime, timedelta
 
 HUBSPOT_API_KEY = os.getenv('HUBSPOT_KEY')
 BASE_URL = 'https://api.hubapi.com'
@@ -42,27 +44,12 @@ def fetch_engagements(lead_id):
 
 
 def fetch_recent_leads(limit=100, days_back=7):
-    """
-    Fetches leads created within the specified time period.
-    
-    Args:
-        limit: Maximum number of leads to return
-        days_back: How many days back to look for new leads
-    
-    Returns:
-        List of recent leads or None if the request fails
-    """
     url = f"{BASE_URL}/crm/v3/objects/contacts/search"
     headers = {
         'Authorization': f"Bearer {HUBSPOT_API_KEY}",
         'Content-Type': 'application/json'
     }
     
-    # Calculate the timestamp for N days ago
-    import time
-    from datetime import datetime, timedelta
-    
-    # Get timestamp for days_back days ago (in milliseconds for HubSpot)
     days_ago = datetime.now() - timedelta(days=days_back)
     timestamp = int(days_ago.timestamp() * 1000)
     
@@ -105,7 +92,6 @@ def fetch_recent_leads(limit=100, days_back=7):
     response = requests.post(url, headers=headers, json=payload)
     if response.status_code == 200:
         data = response.json()
-        # Cache for a shorter period since we want relatively fresh data
         set_cached(cache_key, data, expire_minutes=5)
         return data
     else:
@@ -113,16 +99,6 @@ def fetch_recent_leads(limit=100, days_back=7):
         return None
 
 def create_email(properties, associations):
-    """
-    Creates a new email engagement in HubSpot.
-    
-    Args:
-        properties: Dictionary of email properties (subject, body, etc.)
-        associations: Optional dictionary of associations to link the email to contacts, companies, etc.
-    
-    Returns:
-        Created email data or None if the request fails
-    """
     url = f"{BASE_URL}/crm/v3/objects/emails"
     headers = {
         'Authorization': f"Bearer {HUBSPOT_API_KEY}",
@@ -144,39 +120,26 @@ def create_email(properties, associations):
         return None
 
 def create_note(properties, associations):
-    """
-    Creates a new note in HubSpot.
-    
-    Args:
-        properties: Dictionary of note properties (body, timestamp, etc.)
-        associations: Optional dictionary of associations to link the note to contacts, companies, etc.
-    
-    Returns:
-        Created note data or None if the request fails
-    """
     url = f"{BASE_URL}/crm/v3/objects/notes"
     headers = {
         'Authorization': f"Bearer {HUBSPOT_API_KEY}",
         'Content-Type': 'application/json'
     }
     
-    # Ensure hs_timestamp exists as it's required
     if 'hs_timestamp' not in properties:
         from datetime import datetime
-        # Current time in milliseconds or UTC format
         properties['hs_timestamp'] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     
     payload = {
         "properties": properties
     }
     
-    # Use the correct association format from the documentation
     if associations:
         payload["associations"] = associations
     
     response = requests.post(url, headers=headers, json=payload)
     
-    if response.status_code == 201:  # 201 Created
+    if response.status_code == 201:  
         return response.json()
     else:
         print(f"Error creating note: {response.status_code} - {response.text}")

@@ -174,7 +174,6 @@ export function useLeadApi() {
         return res.json();
       })
       .then((data) => {
-        alert(`${noteType} saved to HubSpot as a note!`);
         return data;
       })
       .catch((err) => {
@@ -208,7 +207,6 @@ export function useLeadApi() {
         return res.json();
       })
       .then((data) => {
-        alert('Email sent successfully!');
         return data;
       })
       .catch((err) => {
