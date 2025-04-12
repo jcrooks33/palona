@@ -19,7 +19,7 @@ OpenAI API key
 
 ### Clone the repo:
 
-cd ai-sales-lead-assistant
+clone the repo and cd
 
 <br>
 
